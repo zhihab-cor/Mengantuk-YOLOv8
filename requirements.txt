@@ -1,0 +1,5 @@
+streamlit
+ultralytics
+pygame
+numpy
+opencv-python-headless
