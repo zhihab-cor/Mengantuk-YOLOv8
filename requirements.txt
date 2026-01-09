@@ -3,3 +3,5 @@ ultralytics
 pygame
 numpy
 opencv-python-headless
+streamlit-webrtc
+av
