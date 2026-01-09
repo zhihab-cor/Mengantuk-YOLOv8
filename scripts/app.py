@@ -21,18 +21,31 @@ st.markdown("""
 if 'start_sleep_time' not in st.session_state:
     st.session_state.start_sleep_time = None
 
-# Inisialisasi Suara
-pygame.mixer.init()
+# Inisialisasi Suara (Safe for Cloud)
+try:
+    pygame.mixer.init()
+    AUDIO_AVAILABLE = True
+except Exception as e:
+    AUDIO_AVAILABLE = False
+    # Di cloud tidak ada audio device, jadi kita abaikan errornya
+    # Agar app tidak crash
+    pass
+
 def play_alarm():
-    if not pygame.mixer.music.get_busy():
-        try:
-            pygame.mixer.music.load("scripts/biohazard-alarm-143105 (1).mp3") 
-            pygame.mixer.music.play(-1) # Loop alarm sampai dimatikan
-        except:
-            pass
+    if AUDIO_AVAILABLE:
+        if not pygame.mixer.music.get_busy():
+            try:
+                pygame.mixer.music.load("scripts/biohazard-alarm-143105 (1).mp3") 
+                pygame.mixer.music.play(-1) # Loop alarm sampai dimatikan
+            except:
+                pass
+    else:
+        # Fallback visual jika audio tidak support (misal di Cloud)
+        pass 
 
 def stop_alarm():
-    pygame.mixer.music.stop()
+    if AUDIO_AVAILABLE:
+        pygame.mixer.music.stop()
 
 # Load Model
 @st.cache_resource
