@@ -17,6 +17,17 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# --- INISIALISASI SESSION STATE ---
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+if 'show_login' not in st.session_state:
+    st.session_state.show_login = False
+# Variabel global untuk settings (bisa diubah admin, berlaku untuk semua user)
+if 'global_conf_threshold' not in st.session_state:
+    st.session_state.global_conf_threshold = 0.5
+if 'global_alert_duration' not in st.session_state:
+    st.session_state.global_alert_duration = 2.0
+
 # --- LOAD MODEL ---
 @st.cache_resource
 def load_model():
@@ -77,6 +88,7 @@ class VideoProcessor:
                             cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 3)
                 # Gambar border merah tebal
                 cv2.rectangle(annotated_frame, (0,0), (img.shape[1], img.shape[0]), (0,0,255), 10)
+                st.audio("scripts/biohazard-alarm-143105.mp3", format="audio/mpeg")
         else:
             self.start_sleep_time = None
             cv2.putText(annotated_frame, "Status: AMAN", (10, 30), 
@@ -84,17 +96,67 @@ class VideoProcessor:
 
         return av.VideoFrame.from_ndarray(annotated_frame, format="bgr24")
 
+# --- FUNGSI LOGIN ---
+def check_login(username, password):
+    # Ganti dengan kredensial yang Anda inginkan
+    ADMIN_USERNAME = "admin"
+    ADMIN_PASSWORD = "admin123"
+    return username == ADMIN_USERNAME and password == ADMIN_PASSWORD
+
+def show_login_form():
+    st.sidebar.markdown("### 🔐 Login Admin")
+    username = st.sidebar.text_input("Username", key="login_username")
+    password = st.sidebar.text_input("Password", type="password", key="login_password")
+    
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        if st.button("Login", use_container_width=True):
+            if check_login(username, password):
+                st.session_state.logged_in = True
+                st.session_state.show_login = False
+                st.rerun()
+            else:
+                st.sidebar.error("Username atau password salah!")
+    with col2:
+        if st.button("Batal", use_container_width=True):
+            st.session_state.show_login = False
+            st.rerun()
+
+
+# --- SIDEBAR ---
+# Button Login/Logout di header sidebar
+if st.session_state.logged_in:
+    st.sidebar.header("Control Panel")
+    st.sidebar.success("✅ Logged in as Admin")
+    st.session_state.global_conf_threshold = st.sidebar.slider(
+        "Confidence Threshold",
+        0.1, 1.0,
+        st.session_state.global_conf_threshold,
+    )
+    st.session_state.global_alert_duration = st.sidebar.slider(
+        "Durasi Alarm (detik)", 
+        1.0, 5.0, 
+        st.session_state.global_alert_duration,
+    )
+    if st.sidebar.button("🚪 Logout", use_container_width=True):
+        st.session_state.logged_in = False
+        st.rerun()
+else:
+    if st.sidebar.button("🔑 Login Admin", use_container_width=True, type="primary"):
+        st.session_state.show_login = True
+        st.rerun()
+
+# Tampilkan form login jika diperlukan
+if st.session_state.show_login and not st.session_state.logged_in:
+    show_login_form()
+    st.stop()
+
 # --- UI LAYOUT ---
+# Main Area
 st.title("🚗 AI Driver Microsleep Detection (Cloud Optimized)")
 st.caption("Menggunakan WebRTC untuk akses kamera browser")
 st.markdown("---")
 
-# Sidebar
-st.sidebar.header("Control Panel")
-conf_threshold = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.5)
-alert_duration = st.sidebar.slider("Durasi Alarm (detik)", 1.0, 5.0, 2.0)
-
-# Main Area
 col1, col2 = st.columns([3, 1])
 
 with col1:
@@ -119,8 +181,8 @@ with col1:
 
     # Hacky way to pass metrics to processor update (not perfectly Thread-safe but works for simple settings)
     if ctx.video_processor:
-        ctx.video_processor.conf_threshold = conf_threshold
-        ctx.video_processor.alert_duration = alert_duration
+        ctx.video_processor.conf_threshold = st.session_state.global_conf_threshold
+        ctx.video_processor.alert_duration = st.session_state.global_alert_duration
 
 with col2:
     st.write("### Panduan")
