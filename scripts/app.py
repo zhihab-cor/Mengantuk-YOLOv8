@@ -88,7 +88,6 @@ class VideoProcessor:
                             cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 3)
                 # Gambar border merah tebal
                 cv2.rectangle(annotated_frame, (0,0), (img.shape[1], img.shape[0]), (0,0,255), 10)
-                st.audio("scripts/biohazard-alarm-143105.mp3", format="audio/mpeg")
         else:
             self.start_sleep_time = None
             cv2.putText(annotated_frame, "Status: AMAN", (10, 30), 
